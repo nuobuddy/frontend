@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+
+# Check if commit message is a merge commit
+if grep -qE "^Merge " "$1"; then
+  echo "Merge commit detected, skipping commit message validation."
+  exit 0
+fi
+
+# Run commitlint
+pnpm exec commitlint --edit "$1"
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "ERROR: Commit message does not follow conventional commit format."
+  echo "Format: <type>: <subject>"
+  echo "Example: feat: add user authentication"
+  echo ""
+  echo "Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  exit 1
+fi

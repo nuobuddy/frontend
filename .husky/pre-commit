@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+
+echo "Running pre-commit checks..."
+
+# Type check
+echo "Checking TypeScript types..."
+pnpm type-check
+if [ $? -ne 0 ]; then
+  echo "ERROR: TypeScript type check failed. Please fix type errors before committing."
+  exit 1
+fi
+
+# Lint check
+echo "Running linters..."
+pnpm lint
+if [ $? -ne 0 ]; then
+  echo "ERROR: Linting failed. Please fix lint errors before committing."
+  exit 1
+fi
+
+# Lint-staged
+pnpm lint-staged
+
+echo "Pre-commit checks passed successfully."
