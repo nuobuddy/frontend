@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import authRoutes from './auth'
 import chatRoutes from './chat'
 import adminRoutes from './admin'
 import userRoutes from './user'
@@ -8,8 +9,9 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/chat',
+      redirect: '/login',
     },
+    ...authRoutes,
     ...chatRoutes,
     ...adminRoutes,
     ...userRoutes,
