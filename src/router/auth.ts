@@ -13,6 +13,12 @@ const authRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/RegisterView.vue'),
     meta: { title: 'Create Account', guest: true },
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    meta: { title: 'Forgot Password', guest: true },
+  },
 ]
 
 export default authRoutes

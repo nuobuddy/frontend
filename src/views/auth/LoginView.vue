@@ -92,12 +92,12 @@ async function handleLogin() {
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
               <label for="password" class="text-sm font-medium text-foreground">Password</label>
-              <button
-                type="button"
+              <RouterLink
+                to="/forgot-password"
                 class="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Forgot password?
-              </button>
+              </RouterLink>
             </div>
             <div class="relative">
               <Input
