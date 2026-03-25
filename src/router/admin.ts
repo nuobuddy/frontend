@@ -25,8 +25,14 @@ const adminRoutes: RouteRecordRaw[] = [
       {
         path: 'users/create',
         name: 'CreateUser',
-        component: () => import('@/views/admin/user/createUser.vue'),
+        component: () => import('@/views/admin/user/userDetail.vue'),
         meta: { title: 'Create User' },
+      },
+      {
+        path: 'users/:id',
+        name: 'UserDetail',
+        component: () => import('@/views/admin/user/userDetail.vue'),
+        meta: { title: 'User Detail' },
       },
       {
         path: 'conversations',
