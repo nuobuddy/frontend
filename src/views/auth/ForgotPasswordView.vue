@@ -1,28 +1,76 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ArrowLeft, Loader2, MailCheck } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
-const email = ref('')
-const loading = ref(false)
-const error = ref('')
-const sent = ref(false)
+const router = useRouter()
 
-const canSubmit = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
+const form = ref({
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const submitting = ref(false)
+const error = ref('')
+
+// Verification code countdown
+const codeSent = ref(false)
+const countdown = ref(0)
+const sendingCode = ref(false)
+let timer: ReturnType<typeof setInterval> | null = null
+
+const validEmail = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email))
+
+const passwordsMatch = computed(
+  () => form.value.newPassword && form.value.confirmPassword === form.value.newPassword,
+)
+
+const canSubmit = computed(
+  () =>
+    validEmail.value &&
+    form.value.code.trim().length > 0 &&
+    form.value.newPassword.length >= 6 &&
+    passwordsMatch.value,
+)
+
+async function sendCode() {
+  if (!validEmail.value || sendingCode.value || countdown.value > 0) return
+  sendingCode.value = true
+  try {
+    // TODO: connect to real API
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    codeSent.value = true
+    countdown.value = 60
+    timer = setInterval(() => {
+      countdown.value -= 1
+      if (countdown.value <= 0) {
+        clearInterval(timer!)
+        timer = null
+      }
+    }, 1000)
+  } finally {
+    sendingCode.value = false
+  }
+}
 
 async function handleSubmit() {
-  if (!canSubmit.value || loading.value) return
-  loading.value = true
+  if (!canSubmit.value || submitting.value) return
+  submitting.value = true
   error.value = ''
   try {
     // TODO: connect to real API
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    sent.value = true
+    router.push('/login')
   } catch {
     error.value = 'Something went wrong. Please try again.'
   } finally {
-    loading.value = false
+    submitting.value = false
   }
 }
 </script>
@@ -30,7 +78,7 @@ async function handleSubmit() {
 <template>
   <div class="min-h-screen bg-background flex items-center justify-center px-6 py-12">
     <div class="w-full max-w-sm">
-      <!-- Back to login -->
+      <!-- Back -->
       <RouterLink
         to="/login"
         class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -39,60 +87,120 @@ async function handleSubmit() {
         Back to sign in
       </RouterLink>
 
-      <!-- Sent state -->
-      <template v-if="sent">
-        <div class="flex flex-col items-center text-center">
-          <div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-            <MailCheck class="w-6 h-6 text-foreground" />
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground">Reset password</h1>
+        <p class="mt-1.5 text-sm text-muted-foreground">
+          Enter your email to receive a verification code.
+        </p>
+      </div>
+
+      <form class="space-y-4" @submit.prevent="handleSubmit">
+        <!-- Email -->
+        <div class="space-y-1.5">
+          <label for="email" class="text-sm font-medium text-foreground">Email</label>
+          <Input
+            id="email"
+            v-model="form.email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            :disabled="submitting"
+          />
+        </div>
+
+        <!-- Verification code -->
+        <div class="space-y-1.5">
+          <label for="code" class="text-sm font-medium text-foreground">Verification code</label>
+          <div class="flex gap-2">
+            <Input
+              id="code"
+              v-model="form.code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              placeholder="Enter code"
+              :disabled="submitting"
+              class="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              class="shrink-0 w-32 text-sm"
+              :disabled="!validEmail || sendingCode || countdown > 0 || submitting"
+              @click="sendCode"
+            >
+              <Loader2 v-if="sendingCode" class="w-4 h-4 animate-spin" />
+              <template v-else>
+                {{ countdown > 0 ? `Resend (${countdown}s)` : codeSent ? 'Resend' : 'Send code' }}
+              </template>
+            </Button>
           </div>
-          <h1 class="text-2xl font-semibold tracking-tight text-foreground">Check your email</h1>
-          <p class="mt-2 text-sm text-muted-foreground">
-            We sent a password reset link to
-            <span class="font-medium text-foreground">{{ email }}</span>
-          </p>
-          <p class="mt-4 text-xs text-muted-foreground">
-            Didn't receive it? Check your spam folder or
+        </div>
+
+        <!-- New password -->
+        <div class="space-y-1.5">
+          <label for="new-password" class="text-sm font-medium text-foreground">New password</label>
+          <div class="relative">
+            <Input
+              id="new-password"
+              v-model="form.newPassword"
+              :type="showPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              :disabled="submitting"
+              class="pr-9"
+            />
             <button
               type="button"
-              class="underline underline-offset-4 hover:text-foreground transition-colors"
-              @click="sent = false"
+              tabindex="-1"
+              class="absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground hover:text-foreground transition-colors"
+              @click="showPassword = !showPassword"
             >
-              try another email
+              <EyeOff v-if="showPassword" class="w-4 h-4" />
+              <Eye v-else class="w-4 h-4" />
             </button>
-          </p>
-        </div>
-      </template>
-
-      <!-- Form state -->
-      <template v-else>
-        <div class="mb-8">
-          <h1 class="text-2xl font-semibold tracking-tight text-foreground">Forgot password?</h1>
-          <p class="mt-1.5 text-sm text-muted-foreground">
-            Enter your email and we'll send you a reset link.
-          </p>
-        </div>
-
-        <form class="space-y-4" @submit.prevent="handleSubmit">
-          <div class="space-y-1.5">
-            <label for="email" class="text-sm font-medium text-foreground">Email</label>
-            <Input
-              id="email"
-              v-model="email"
-              type="email"
-              autocomplete="email"
-              placeholder="you@example.com"
-              :disabled="loading"
-            />
           </div>
+        </div>
 
-          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <!-- Confirm new password -->
+        <div class="space-y-1.5">
+          <label for="confirm-password" class="text-sm font-medium text-foreground">
+            Confirm new password
+          </label>
+          <div class="relative">
+            <Input
+              id="confirm-password"
+              v-model="form.confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              :disabled="submitting"
+              class="pr-9"
+              :aria-invalid="form.confirmPassword && !passwordsMatch ? true : undefined"
+            />
+            <button
+              type="button"
+              tabindex="-1"
+              class="absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground hover:text-foreground transition-colors"
+              @click="showConfirmPassword = !showConfirmPassword"
+            >
+              <EyeOff v-if="showConfirmPassword" class="w-4 h-4" />
+              <Eye v-else class="w-4 h-4" />
+            </button>
+          </div>
+          <p v-if="form.confirmPassword && !passwordsMatch" class="text-xs text-destructive">
+            Passwords do not match
+          </p>
+        </div>
 
-          <Button type="submit" class="w-full" :disabled="!canSubmit || loading">
-            <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
-            {{ loading ? 'Sending...' : 'Send reset link' }}
-          </Button>
-        </form>
-      </template>
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+
+        <Button type="submit" class="w-full" :disabled="!canSubmit || submitting">
+          <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+          {{ submitting ? 'Resetting...' : 'Reset password' }}
+        </Button>
+      </form>
     </div>
   </div>
 </template>
