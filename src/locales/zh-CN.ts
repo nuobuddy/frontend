@@ -35,6 +35,7 @@ export default {
     userManagement: '用户管理',
     userList: '用户列表',
     createUser: '创建用户',
+    userDetail: '用户详情',
     conversationManagement: '对话管理',
     conversationAnalysis: '对话分析',
     conversationList: '对话列表',
