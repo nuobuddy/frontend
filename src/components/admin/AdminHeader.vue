@@ -9,7 +9,7 @@ interface BreadcrumbItem {
   path?: string
 }
 
-const props = defineProps<{
+defineProps<{
   sidebarOpen: boolean
 }>()
 
