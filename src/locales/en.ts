@@ -164,5 +164,11 @@ export default {
     outputTokens: 'Output',
     totalTokens: 'Total',
     tokensUsed: '{count} tokens used',
+
+    // Settings
+    settings: {
+      title: 'Chat Settings',
+      description: 'Configure your chat preferences and behavior.',
+    },
   },
 }

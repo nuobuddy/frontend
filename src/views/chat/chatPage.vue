@@ -4,6 +4,14 @@ import { useI18n } from 'vue-i18n'
 import ChatSideBar from '@/components/chat/ChatSideBar.vue'
 import ChatHeader from '@/components/chat/ChatHeader.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
+import ChatSettings from '@/components/chat/settings/ChatSettings.vue'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const { t } = useI18n()
 
@@ -31,6 +39,7 @@ onUnmounted(() => mobileQuery.removeEventListener('change', onMediaChange))
 
 // --- State ---
 const sidebarOpen = ref(!mobileQuery.matches)
+const chatSettingsOpen = ref(false)
 const chatTitle = ref<string | undefined>(undefined)
 const inputValue = ref('')
 const generating = ref(false)
@@ -58,7 +67,12 @@ async function handleSend(message: string) {
   generating.value = true
 
   // Placeholder assistant message for streaming effect
-  const assistantMsg: Message = { id: nextId++, role: 'assistant', content: '', timestamp: new Date() }
+  const assistantMsg: Message = {
+    id: nextId++,
+    role: 'assistant',
+    content: '',
+    timestamp: new Date(),
+  }
   messages.value.push(assistantMsg)
 
   // Simulate streaming response (replace with real API call)
@@ -82,6 +96,10 @@ function handleStop() {
 function formatTime(date: Date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
+
+function handleChatSettings() {
+  chatSettingsOpen.value = true
+}
 </script>
 
 <template>
@@ -96,16 +114,31 @@ function formatTime(date: Date) {
     </Transition>
 
     <!-- Sidebar -->
-    <ChatSideBar :open="sidebarOpen" :mobile="isMobile" @close="sidebarOpen = false" />
+    <ChatSideBar
+      :open="sidebarOpen"
+      :mobile="isMobile"
+      @close="sidebarOpen = false"
+      @chat-settings="handleChatSettings"
+    />
 
     <!-- Main Content -->
-    <div class="flex flex-col flex-1 bg-white overflow-hidden" :class="isMobile ? '' : 'rounded-lg shadow-md'">
-      <ChatHeader :sidebar-open="sidebarOpen" :title="chatTitle" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+    <div
+      class="flex flex-col flex-1 bg-white overflow-hidden"
+      :class="isMobile ? '' : 'rounded-lg shadow-md'"
+    >
+      <ChatHeader
+        :sidebar-open="sidebarOpen"
+        :title="chatTitle"
+        @toggle-sidebar="sidebarOpen = !sidebarOpen"
+      />
 
       <!-- Message List -->
       <div ref="messageListRef" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         <!-- Welcome state -->
-        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-center gap-3">
+        <div
+          v-if="messages.length === 0"
+          class="flex flex-col items-center justify-center h-full text-center gap-3"
+        >
           <p class="text-2xl font-semibold text-foreground">{{ t('chat.welcomeTitle') }}</p>
           <p class="text-sm text-muted-foreground">{{ t('chat.welcomeSubtitle') }}</p>
         </div>
@@ -115,17 +148,23 @@ function formatTime(date: Date) {
           <!-- User message -->
           <div v-if="msg.role === 'user'" class="flex justify-end">
             <div class="max-w-[70%]">
-              <div class="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+              <div
+                class="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+              >
                 {{ msg.content }}
               </div>
-              <p class="mt-1 text-right text-xs text-muted-foreground">{{ formatTime(msg.timestamp) }}</p>
+              <p class="mt-1 text-right text-xs text-muted-foreground">
+                {{ formatTime(msg.timestamp) }}
+              </p>
             </div>
           </div>
 
           <!-- Assistant message -->
           <div v-else class="flex justify-start">
             <div class="max-w-[70%]">
-              <div class="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+              <div
+                class="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+              >
                 <span v-if="msg.content">{{ msg.content }}</span>
                 <span v-else class="inline-flex items-center gap-1 text-muted-foreground">
                   <span class="animate-bounce">·</span>
@@ -149,6 +188,19 @@ function formatTime(date: Date) {
         />
       </div>
     </div>
+
+    <!-- Chat Settings Dialog -->
+    <Dialog v-model:open="chatSettingsOpen">
+      <DialogContent class="sm:max-w-2xl lg:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{{ t('sidebar.userMenu.chatSettings') }}</DialogTitle>
+          <DialogDescription>
+            {{ t('chat.settings.description') }}
+          </DialogDescription>
+        </DialogHeader>
+        <ChatSettings />
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 

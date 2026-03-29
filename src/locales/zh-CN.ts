@@ -163,5 +163,11 @@ export default {
     outputTokens: '输出',
     totalTokens: '合计',
     tokensUsed: '已使用 {count} Tokens',
+
+    // 设置
+    settings: {
+      title: '对话设置',
+      description: '配置您的对话偏好和行为。',
+    },
   },
 }

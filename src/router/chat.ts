@@ -20,7 +20,7 @@ const chatRoutes: RouteRecordRaw[] = [
   {
     path: '/chat/settings',
     name: 'ChatSettings',
-    component: () => import('@/views/chat/chatSettings.vue'),
+    component: () => import('@/components/chat/settings/ChatSettings.vue'),
     meta: {
       title: 'Chat Settings',
     },

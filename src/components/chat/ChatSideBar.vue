@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Languages, LogOut, MessageSquarePlus, PanelLeftClose, Search, Settings } from 'lucide-vue-next'
+import {
+  Languages,
+  LogOut,
+  MessageSquarePlus,
+  PanelLeftClose,
+  Search,
+  Settings,
+} from 'lucide-vue-next'
 import {
   SidebarContent,
   SidebarFooter,
@@ -32,7 +39,11 @@ interface Props {
 }
 
 defineProps<Props>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; chatSettings: [] }>()
+
+function handleChatSettings() {
+  emit('chatSettings')
+}
 
 const { t } = useI18n()
 
@@ -47,10 +58,34 @@ interface Conversation {
 
 // --- Mock data ---
 const conversations = ref<Conversation[]>([
-  { id: 1, title: 'Getting started with Vue 3', lastMessage: 'How do I use Composition API?', time: '10:24', group: t('chat.today') },
-  { id: 2, title: 'Tailwind CSS tips', lastMessage: 'What are the best practices?', time: '09:05', group: t('chat.today') },
-  { id: 3, title: 'TypeScript generics', lastMessage: 'Can you explain mapped types?', time: 'Yesterday', group: t('chat.yesterday') },
-  { id: 4, title: 'Pinia state management', lastMessage: 'How to persist state?', time: 'Mon', group: t('chat.lastWeek') },
+  {
+    id: 1,
+    title: 'Getting started with Vue 3',
+    lastMessage: 'How do I use Composition API?',
+    time: '10:24',
+    group: t('chat.today'),
+  },
+  {
+    id: 2,
+    title: 'Tailwind CSS tips',
+    lastMessage: 'What are the best practices?',
+    time: '09:05',
+    group: t('chat.today'),
+  },
+  {
+    id: 3,
+    title: 'TypeScript generics',
+    lastMessage: 'Can you explain mapped types?',
+    time: 'Yesterday',
+    group: t('chat.yesterday'),
+  },
+  {
+    id: 4,
+    title: 'Pinia state management',
+    lastMessage: 'How to persist state?',
+    time: 'Mon',
+    group: t('chat.lastWeek'),
+  },
 ])
 
 const activeId = ref<number | null>(1)
@@ -91,10 +126,6 @@ function switchLanguage(locale: 'zh-CN' | 'en') {
 function handleLogout() {
   console.log('logout')
 }
-
-function handleChatSettings() {
-  console.log('chat settings')
-}
 </script>
 
 <template>
@@ -104,12 +135,11 @@ function handleChatSettings() {
       mobile
         ? [
             'absolute inset-y-0 left-0 z-20 h-full rounded-none',
-            open ? 'w-full translate-x-0 opacity-100' : 'w-full -translate-x-full opacity-0 pointer-events-none',
+            open
+              ? 'w-full translate-x-0 opacity-100'
+              : 'w-full -translate-x-full opacity-0 pointer-events-none',
           ]
-        : [
-            'relative h-full rounded-lg',
-            open ? 'w-72 opacity-100 mr-2' : 'w-0 opacity-0',
-          ],
+        : ['relative h-full rounded-lg', open ? 'w-72 opacity-100 mr-2' : 'w-0 opacity-0'],
     ]"
   >
     <div class="flex min-w-64 flex-col h-full">
@@ -117,7 +147,9 @@ function handleChatSettings() {
       <SidebarHeader class="border-b border-sidebar-border px-2 py-0 h-14 justify-center">
         <div class="flex items-center gap-2">
           <!-- Logo -->
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary"
+          >
             <span class="text-sm font-bold text-sidebar-primary-foreground">N</span>
           </div>
           <span class="flex-1 text-base font-semibold text-sidebar-foreground">NuoBuddy</span>
@@ -148,7 +180,9 @@ function handleChatSettings() {
       <!-- Search -->
       <div class="shrink-0 px-3 py-2">
         <div class="relative">
-          <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Search
+            class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          />
           <Input
             v-model="searchQuery"
             :placeholder="t('chat.searchConversations')"
@@ -178,7 +212,9 @@ function handleChatSettings() {
                       <span class="truncate text-sm font-medium">{{ conv.title }}</span>
                       <span class="shrink-0 text-xs text-muted-foreground">{{ conv.time }}</span>
                     </div>
-                    <p class="w-full truncate text-xs text-muted-foreground">{{ conv.lastMessage }}</p>
+                    <p class="w-full truncate text-xs text-muted-foreground">
+                      {{ conv.lastMessage }}
+                    </p>
                   </SidebarMenuButtonChild>
                 </SidebarMenuItem>
               </SidebarMenu>
