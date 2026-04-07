@@ -5,10 +5,11 @@ import { useI18n } from 'vue-i18n'
 import { Eye, EyeOff, Loader2, Check, X } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const { t } = useI18n()
+const authStore = useAuthStore()
 
 const form = ref({
   username: '',
@@ -19,7 +20,6 @@ const form = ref({
 
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-const loading = ref(false)
 const error = ref('')
 
 const passwordRules = computed(() => [
@@ -40,27 +40,24 @@ const canSubmit = computed(
     passwordsMatch.value,
 )
 
+const loading = computed(() => authStore.loading)
+
 const typedTitle = ref('')
 const typedBody = ref('')
 let typingTimer: ReturnType<typeof setInterval> | null = null
 
 async function handleRegister() {
   if (!canSubmit.value || loading.value) return
-  loading.value = true
   error.value = ''
   try {
-    const response = await api.register(
+    await authStore.register(
       form.value.username.trim(),
       form.value.email.trim(),
       form.value.password,
     )
-    localStorage.setItem('auth_token', response.data.token)
-    localStorage.setItem('auth_user', JSON.stringify(response.data.user))
     router.push('/chat')
   } catch (err) {
-    error.value = (err as Error).message || t('auth.registerPage.registerError')
-  } finally {
-    loading.value = false
+    error.value = authStore.error || (err as Error).message || t('auth.registerPage.registerError')
   }
 }
 

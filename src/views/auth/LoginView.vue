@@ -5,10 +5,11 @@ import { useI18n } from 'vue-i18n'
 import { Eye, EyeOff, Loader2 } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const { t } = useI18n()
+const authStore = useAuthStore()
 
 const form = ref({
   email: '',
@@ -16,10 +17,10 @@ const form = ref({
 })
 
 const showPassword = ref(false)
-const loading = ref(false)
 const error = ref('')
 
 const canSubmit = computed(() => form.value.email.trim() && form.value.password.trim())
+const loading = computed(() => authStore.loading)
 
 const typedTitle = ref('')
 const typedBody = ref('')
@@ -27,17 +28,12 @@ let typingTimer: ReturnType<typeof setInterval> | null = null
 
 async function handleLogin() {
   if (!canSubmit.value || loading.value) return
-  loading.value = true
   error.value = ''
   try {
-    const response = await api.login(form.value.email.trim(), form.value.password)
-    localStorage.setItem('auth_token', response.data.token)
-    localStorage.setItem('auth_user', JSON.stringify(response.data.user))
+    await authStore.login(form.value.email.trim(), form.value.password)
     router.push('/chat')
   } catch (err) {
-    error.value = (err as Error).message || t('auth.loginPage.loginError')
-  } finally {
-    loading.value = false
+    error.value = authStore.error || (err as Error).message || t('auth.loginPage.loginError')
   }
 }
 

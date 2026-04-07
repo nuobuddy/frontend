@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PanelLeft, Share, Check, ClipboardPaste } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useChatStore } from '@/stores/chat'
 
 const { t } = useI18n()
+const chatStore = useChatStore()
 
 interface Props {
   title?: string
@@ -33,8 +35,12 @@ const shareDialogOpen = ref(false)
 const shareLink = ref('')
 const isShared = ref(false)
 const copied = ref(false)
+const shareLoading = ref(false)
 
-// Generate share link
+// Check if current conversation is already shared
+const currentShareStatus = computed(() => chatStore.currentConversation?.share ?? false)
+
+// Generate local share link (fallback)
 function generateShareLink(): string {
   if (!props.conversationId) return ''
   const baseUrl = window.location.origin
@@ -43,37 +49,40 @@ function generateShareLink(): string {
 
 // Handle share button click
 async function handleShareClick() {
-  // Generate and set the share link
-  shareLink.value = generateShareLink()
-  isShared.value = true
+  if (!props.conversationId) return
 
-  // TODO: Replace with actual API call when token is available
-  // if (props.conversationId && props.token) {
-  //   try {
-  //     const result = await api.createShare(props.conversationId, props.token)
-  //     shareLink.value = result.shareUrl
-  //   } catch (error) {
-  //     console.error('Failed to create share:', error)
-  //   }
-  // }
+  shareLoading.value = true
+  try {
+    // Call API to create share link
+    const shareUrl = await chatStore.createShare(props.conversationId)
+    shareLink.value = shareUrl || generateShareLink()
+    isShared.value = true
+  } catch (err) {
+    console.error('Failed to create share:', err)
+    // Fallback to local URL generation
+    shareLink.value = generateShareLink()
+    isShared.value = currentShareStatus.value
+  } finally {
+    shareLoading.value = false
+  }
 
-  // Open the dialog
   shareDialogOpen.value = true
 }
 
 // Handle cancel share
 async function handleCancelShare() {
-  isShared.value = false
-  shareDialogOpen.value = false
+  if (!props.conversationId) return
 
-  // TODO: Replace with actual API call when token is available
-  // if (props.conversationId && props.token) {
-  //   try {
-  //     await api.deleteShare(props.conversationId, props.token)
-  //   } catch (error) {
-  //     console.error('Failed to cancel share:', error)
-  //   }
-  // }
+  shareLoading.value = true
+  try {
+    await chatStore.deleteShare(props.conversationId)
+    isShared.value = false
+    shareDialogOpen.value = false
+  } catch (err) {
+    console.error('Failed to cancel share:', err)
+  } finally {
+    shareLoading.value = false
+  }
 }
 
 // Copy to clipboard
@@ -84,8 +93,8 @@ async function copyToClipboard() {
     setTimeout(() => {
       copied.value = false
     }, 2000)
-  } catch (error) {
-    console.error('Failed to copy:', error)
+  } catch (err) {
+    console.error('Failed to copy:', err)
   }
 }
 </script>
@@ -107,8 +116,15 @@ async function copyToClipboard() {
     </h1>
     <div v-else class="flex-1" />
 
-    <!-- Share button (hidden in share mode) -->
-    <Button v-if="!isShareMode" variant="ghost" size="sm" class="h-8" @click="handleShareClick">
+    <!-- Share button (hidden in share mode, only shown when a conversation exists) -->
+    <Button
+      v-if="!isShareMode && conversationId"
+      variant="ghost"
+      size="sm"
+      class="h-8"
+      :disabled="shareLoading"
+      @click="handleShareClick"
+    >
       <Share class="mr-2 h-4 w-4" />
       {{ t('chat.share.button') }}
     </Button>
@@ -125,11 +141,11 @@ async function copyToClipboard() {
 
         <div class="flex items-center space-x-2">
           <div class="grid flex-1 gap-2">
-            <div class="h-10 rounded-md border border-input bg-muted px-3 py-2 text-sm">
-              {{ generateShareLink() }}
+            <div class="h-10 rounded-md border border-input bg-muted px-3 py-2 text-sm truncate">
+              {{ shareLink }}
             </div>
           </div>
-          <Button @click="copyToClipboard" size="icon" class="px-3">
+          <Button size="icon" class="px-3" @click="copyToClipboard">
             <span v-if="copied" class="flex items-center gap-1">
               <Check class="h-4 w-4" />
             </span>
@@ -144,6 +160,7 @@ async function copyToClipboard() {
             v-if="isShared"
             variant="ghost"
             class="text-destructive hover:text-destructive hover:bg-destructive/10"
+            :disabled="shareLoading"
             @click="handleCancelShare"
           >
             {{ t('chat.share.cancelShare') }}

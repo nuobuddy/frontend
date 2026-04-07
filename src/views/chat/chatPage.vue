@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ChatSideBar from '@/components/chat/ChatSideBar.vue'
 import ChatHeader from '@/components/chat/ChatHeader.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
+import { useChatStore } from '@/stores/chat'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const route = useRoute()
-
-// --- Types ---
-interface Message {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-}
+const router = useRouter()
+const chatStore = useChatStore()
+const authStore = useAuthStore()
 
 // --- Share mode detection ---
 const isShareMode = computed(() => route.query.share === '1')
@@ -29,32 +26,64 @@ const isMobile = ref(mobileQuery.matches)
 
 function onMediaChange(e: MediaQueryListEvent) {
   isMobile.value = e.matches
-  // Auto-collapse when switching to mobile
   if (e.matches) sidebarOpen.value = false
   else sidebarOpen.value = true
 }
 
 onMounted(() => {
   mobileQuery.addEventListener('change', onMediaChange)
-  // Check access if in share mode
+
+  // Load conversation data
   if (isShareMode.value && conversationId.value) {
     checkShareAccess()
+  } else if (conversationId.value) {
+    loadConversationDetail(conversationId.value)
+  } else {
+    // New chat - clear current conversation
+    chatStore.clearCurrentConversation()
   }
 })
-onUnmounted(() => mobileQuery.removeEventListener('change', onMediaChange))
+
+onUnmounted(() => {
+  mobileQuery.removeEventListener('change', onMediaChange)
+  chatStore.stopStreaming()
+})
+
+// Watch for route changes (switching between conversations)
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId && typeof newId === 'string') {
+      if (isShareMode.value) {
+        checkShareAccess()
+      } else {
+        loadConversationDetail(newId)
+      }
+    } else {
+      chatStore.clearCurrentConversation()
+    }
+  },
+)
+
+// --- Load conversation detail ---
+async function loadConversationDetail(id: string) {
+  try {
+    await chatStore.fetchConversationDetail(id)
+    scrollToBottom()
+  } catch (err) {
+    console.error('Failed to load conversation:', err)
+  }
+}
 
 // --- Check share access ---
 async function checkShareAccess() {
+  if (!conversationId.value) return
   loadingAccess.value = true
   try {
-    // TODO: Replace with actual API call
-    // const result = await api.getConversation(conversationId.value, true)
-    // hasAccess.value = result.accessible
-
-    // For now, simulate access check
-    hasAccess.value = true
-  } catch (error) {
-    console.error('Failed to check share access:', error)
+    await chatStore.fetchConversationDetail(conversationId.value, true)
+    hasAccess.value = chatStore.currentConversation?.accessible !== false
+    scrollToBottom()
+  } catch {
     hasAccess.value = false
   } finally {
     loadingAccess.value = false
@@ -63,12 +92,13 @@ async function checkShareAccess() {
 
 // --- State ---
 const sidebarOpen = ref(!mobileQuery.matches)
-const chatTitle = ref<string | undefined>(undefined)
 const inputValue = ref('')
-const generating = ref(false)
-const messages = ref<Message[]>([])
 const messageListRef = ref<HTMLDivElement | null>(null)
-let nextId = 1
+
+// Computed from store
+const messages = computed(() => chatStore.currentConversation?.messages ?? [])
+const generating = computed(() => chatStore.streaming)
+const chatTitle = computed(() => chatStore.currentConversation?.title ?? undefined)
 
 // --- Helpers ---
 function scrollToBottom() {
@@ -79,54 +109,68 @@ function scrollToBottom() {
   })
 }
 
+// Auto-scroll when streaming message updates
+watch(
+  () => chatStore.streamingMessage,
+  () => {
+    scrollToBottom()
+  },
+)
+
 // --- Handlers ---
 async function handleSend(message: string) {
   if (!message.trim() || generating.value) return
 
-  if (!chatTitle.value) chatTitle.value = message.slice(0, 60)
-  messages.value.push({ id: nextId++, role: 'user', content: message, timestamp: new Date() })
-  scrollToBottom()
+  let targetConversationId = conversationId.value
 
-  generating.value = true
+  // If no current conversation, create one first
+  if (!targetConversationId) {
+    try {
+      const conversation = await chatStore.createConversation(message.slice(0, 60))
+      targetConversationId = conversation.id
 
-  // Placeholder assistant message for streaming effect
-  const assistantMsg: Message = {
-    id: nextId++,
-    role: 'assistant',
-    content: '',
-    timestamp: new Date(),
-  }
-  messages.value.push(assistantMsg)
+      // Initialize currentConversation for message display
+      chatStore.setCurrentConversation({
+        ...conversation,
+        messages: [],
+      })
 
-  // Simulate streaming response (replace with real API call)
-  const reply = t('chat.thinking')
-  let charIndex = 0
-  const interval = setInterval(() => {
-    if (charIndex < reply.length) {
-      assistantMsg.content += reply[charIndex++]
-      scrollToBottom()
-    } else {
-      clearInterval(interval)
-      generating.value = false
+      // Navigate to the new conversation URL (without reloading)
+      router.replace({ name: 'ChatSession', params: { id: conversation.id } })
+    } catch (err) {
+      console.error('Failed to create conversation:', err)
+      return
     }
-  }, 40)
+  } else if (!chatStore.currentConversation) {
+    // Conversation ID exists but detail not loaded - this shouldn't happen normally
+    // but handle gracefully
+    try {
+      await chatStore.fetchConversationDetail(targetConversationId)
+    } catch (err) {
+      console.error('Failed to load conversation:', err)
+      return
+    }
+  }
+
+  // Send message via SSE
+  try {
+    await chatStore.sendMessage(targetConversationId, message)
+  } catch (err) {
+    console.error('Failed to send message:', err)
+  }
 }
 
 function handleStop() {
-  generating.value = false
+  chatStore.stopStreaming()
 }
 
-function formatTime(date: Date) {
+function formatTime(dateStr: string) {
+  const date = new Date(dateStr)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// Get token from localStorage (if available)
-const token = computed(() => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return localStorage.getItem('token') || undefined
-  }
-  return undefined
-})
+// Get token for ChatHeader
+const token = computed(() => authStore.token ?? undefined)
 </script>
 
 <template>
@@ -247,15 +291,22 @@ const token = computed(() => {
                 >
                   <span v-if="msg.content">{{ msg.content }}</span>
                   <span v-else class="inline-flex items-center gap-1 text-muted-foreground">
-                    <span class="animate-bounce">·</span>
-                    <span class="animate-bounce [animation-delay:0.15s]">·</span>
-                    <span class="animate-bounce [animation-delay:0.3s]">·</span>
+                    <span class="animate-bounce">.</span>
+                    <span class="animate-bounce [animation-delay:0.15s]">.</span>
+                    <span class="animate-bounce [animation-delay:0.3s]">.</span>
                   </span>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">{{ formatTime(msg.timestamp) }}</p>
               </div>
             </div>
           </template>
+
+          <!-- Error message -->
+          <div v-if="chatStore.error" class="flex justify-center">
+            <p class="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">
+              {{ chatStore.error }}
+            </p>
+          </div>
         </div>
 
         <!-- Input Area (hidden in share mode) -->
