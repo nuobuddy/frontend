@@ -7,6 +7,7 @@ const chatRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/chat/chatPage.vue'),
     meta: {
       title: 'Chat',
+      requiresAuth: true,
     },
   },
   {
@@ -15,6 +16,8 @@ const chatRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/chat/chatPage.vue'),
     meta: {
       title: 'Chat Session',
+      requiresAuth: true,
+      allowShare: true, // Allow shared access without auth via ?share=1
     },
   },
   {
@@ -23,6 +26,7 @@ const chatRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/chat/chatSettings.vue'),
     meta: {
       title: 'Chat Settings',
+      requiresAuth: true,
     },
   },
 ]

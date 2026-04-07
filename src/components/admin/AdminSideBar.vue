@@ -31,6 +31,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useAuthStore } from '@/stores/auth'
 import { i18n } from '@/i18n'
 
 interface Props {
@@ -43,6 +44,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
 const route = useRoute()
+const authStore = useAuthStore()
 
 // --- Types ---
 interface NavItem {
@@ -62,7 +64,7 @@ function switchLanguage(locale: 'zh-CN' | 'en') {
 }
 
 function handleLogout() {
-  console.log('logout')
+  authStore.logout()
 }
 
 // --- Navigation Tree ---
@@ -79,7 +81,12 @@ const navigationTree = computed<NavItem[]>(() => [
     icon: Users,
     children: [
       { id: 'userList', label: t('admin.userList'), icon: ChevronRight, path: '/admin/users' },
-      { id: 'createUser', label: t('admin.createUser'), icon: ChevronRight, path: '/admin/users/create' },
+      {
+        id: 'createUser',
+        label: t('admin.createUser'),
+        icon: ChevronRight,
+        path: '/admin/users/create',
+      },
     ],
   },
   {
@@ -87,8 +94,18 @@ const navigationTree = computed<NavItem[]>(() => [
     label: t('admin.conversationManagement'),
     icon: MessageSquare,
     children: [
-      { id: 'conversationAnalysis', label: t('admin.conversationAnalysis'), icon: ChevronRight, path: '/admin/conversations' },
-      { id: 'conversationList', label: t('admin.conversationList'), icon: ChevronRight, path: '/admin/conversations/list' },
+      {
+        id: 'conversationAnalysis',
+        label: t('admin.conversationAnalysis'),
+        icon: ChevronRight,
+        path: '/admin/conversations',
+      },
+      {
+        id: 'conversationList',
+        label: t('admin.conversationList'),
+        icon: ChevronRight,
+        path: '/admin/conversations/list',
+      },
     ],
   },
   {
@@ -128,12 +145,12 @@ function handleItemClick(item: NavItem) {
   }
 }
 
-// --- Mock user ---
-const mockUser = {
-  name: 'Admin User',
-  email: 'admin@nuobuddy.com',
+// Get user from auth store
+const currentUser = computed(() => ({
+  name: authStore.user?.username || 'Admin',
+  email: authStore.user?.email || 'admin@nuobuddy.com',
   avatar: '',
-}
+}))
 </script>
 
 <template>
@@ -143,12 +160,11 @@ const mockUser = {
       mobile
         ? [
             'absolute inset-y-0 left-0 z-20 h-full rounded-none',
-            open ? 'w-full translate-x-0 opacity-100' : 'w-full -translate-x-full opacity-0 pointer-events-none',
+            open
+              ? 'w-full translate-x-0 opacity-100'
+              : 'w-full -translate-x-full opacity-0 pointer-events-none',
           ]
-        : [
-            'relative h-full rounded-lg',
-            open ? 'w-72 opacity-100 mr-2' : 'w-0 opacity-0',
-          ],
+        : ['relative h-full rounded-lg', open ? 'w-72 opacity-100 mr-2' : 'w-0 opacity-0'],
     ]"
   >
     <div class="flex min-w-64 flex-col h-full">
@@ -156,7 +172,9 @@ const mockUser = {
       <SidebarHeader class="border-b border-sidebar-border px-2 py-0 h-14 justify-center">
         <div class="flex items-center gap-2">
           <!-- Logo -->
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary"
+          >
             <span class="text-sm font-bold text-sidebar-primary-foreground">N</span>
           </div>
           <span class="flex-1 text-base font-semibold text-sidebar-foreground">NuoBuddy Admin</span>
@@ -183,7 +201,9 @@ const mockUser = {
               <SidebarMenuButtonChild
                 :is-active="isActive(item.path)"
                 class="h-auto py-2"
-                @click="item.path && !item.children ? $router.push(item.path) : handleItemClick(item)"
+                @click="
+                  item.path && !item.children ? $router.push(item.path) : handleItemClick(item)
+                "
               >
                 <div class="flex w-full items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -221,7 +241,7 @@ const mockUser = {
 
       <!-- User Footer -->
       <SidebarFooter>
-        <UserCard :user="mockUser" :mobile="mobile">
+        <UserCard :user="currentUser" :mobile="mobile">
           <DropdownMenuContent
             :side="mobile ? 'top' : 'right'"
             :align="mobile ? 'center' : 'end'"
