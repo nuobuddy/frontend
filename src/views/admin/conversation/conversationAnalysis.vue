@@ -9,16 +9,16 @@ const { t } = useI18n()
 
 // ─── Keyword List ──────────────────────────────────────────────────────────
 const keywords = [
-  { keyword: '账号登录', count: 312, trend: 'up' },
-  { keyword: '密码重置', count: 278, trend: 'up' },
-  { keyword: '订单查询', count: 245, trend: 'down' },
-  { keyword: '退款申请', count: 198, trend: 'up' },
-  { keyword: '功能使用', count: 187, trend: 'stable' },
-  { keyword: '价格咨询', count: 165, trend: 'down' },
-  { keyword: '技术报错', count: 143, trend: 'up' },
-  { keyword: 'API 接入', count: 128, trend: 'stable' },
-  { keyword: '数据导出', count: 112, trend: 'down' },
-  { keyword: '权限设置', count: 98, trend: 'up' },
+  { keyword: 'registration', count: 312, trend: 'up' },
+  { keyword: 'tuition', count: 278, trend: 'up' },
+  { keyword: 'calendar', count: 245, trend: 'down' },
+  { keyword: 'exams', count: 198, trend: 'up' },
+  { keyword: 'library', count: 187, trend: 'stable' },
+  { keyword: 'ID Card', count: 165, trend: 'down' },
+  { keyword: 'wifi', count: 143, trend: 'up' },
+  { keyword: 'housing', count: 128, trend: 'stable' },
+  { keyword: 'internships', count: 112, trend: 'down' },
+  { keyword: 'graduation', count: 98, trend: 'up' },
 ]
 const maxKeywordCount = computed(() => Math.max(...keywords.map((k) => k.count)))
 </script>

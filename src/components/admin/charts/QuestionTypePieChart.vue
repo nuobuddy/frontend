@@ -17,21 +17,21 @@ import { ChartContainer, ChartTooltipContent, componentToString } from '@/compon
 const { t } = useI18n()
 
 const questionTypeData = [
-  { type: 'technical', count: 438 },
-  { type: 'billing', count: 215 },
-  { type: 'general', count: 312 },
-  { type: 'feedback', count: 189 },
-  { type: 'other', count: 124 },
+  { type: 'policies', count: 438 },
+  { type: 'support', count: 215 },
+  { type: 'guide', count: 312 },
+  { type: 'general', count: 189 },
+  { type: 'others', count: 124 },
 ]
 type PieData = (typeof questionTypeData)[number]
 
 const pieConfig = computed<ChartConfig>(() => ({
   count: { label: t('admin.charts.questionTypeCount'), color: undefined },
-  technical: { label: t('admin.charts.questionTypeTechnical'), color: 'var(--chart-1)' },
-  billing: { label: t('admin.charts.questionTypeBilling'), color: 'var(--chart-2)' },
-  general: { label: t('admin.charts.questionTypeGeneral'), color: 'var(--chart-3)' },
-  feedback: { label: t('admin.charts.questionTypeFeedback'), color: 'var(--chart-4)' },
-  other: { label: t('admin.charts.questionTypeOther'), color: 'var(--chart-5)' },
+  policies: { label: 'Policies', color: 'var(--chart-1)' },
+  support: { label: 'Support', color: 'var(--chart-2)' },
+  guide: { label: 'Guide', color: 'var(--chart-3)' },
+  general: { label: 'General', color: 'var(--chart-4)' },
+  others: { label: 'Others', color: 'var(--chart-5)' },
 }))
 
 const totalConversations = computed(() =>
