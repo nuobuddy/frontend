@@ -2,11 +2,19 @@
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 import ChatSideBar from '@/components/chat/ChatSideBar.vue'
 import ChatHeader from '@/components/chat/ChatHeader.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+
+const md = new MarkdownIt({ breaks: true, linkify: true })
+
+function renderMarkdown(content: string): string {
+  return DOMPurify.sanitize(md.render(content))
+}
 
 const { t } = useI18n()
 const route = useRoute()
@@ -53,6 +61,10 @@ onUnmounted(() => {
 watch(
   () => route.params.id,
   (newId) => {
+    if (suppressNextRouteWatch) {
+      suppressNextRouteWatch = false
+      return
+    }
     if (newId && typeof newId === 'string') {
       if (isShareMode.value) {
         checkShareAccess()
@@ -94,6 +106,8 @@ async function checkShareAccess() {
 const sidebarOpen = ref(!mobileQuery.matches)
 const inputValue = ref('')
 const messageListRef = ref<HTMLDivElement | null>(null)
+// Flag to suppress route watcher when we programmatically navigate after creating a conversation
+let suppressNextRouteWatch = false
 
 // Computed from store
 const messages = computed(() => chatStore.currentConversation?.messages ?? [])
@@ -136,6 +150,8 @@ async function handleSend(message: string) {
       })
 
       // Navigate to the new conversation URL (without reloading)
+      // Suppress the route watcher so it doesn't reload and wipe the pending messages
+      suppressNextRouteWatch = true
       router.replace({ name: 'ChatSession', params: { id: conversation.id } })
     } catch (err) {
       console.error('Failed to create conversation:', err)
@@ -286,10 +302,13 @@ const token = computed(() => authStore.token ?? undefined)
             <!-- Assistant message -->
             <div v-else class="flex justify-start">
               <div class="max-w-[70%]">
-                <div
-                  class="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
-                >
-                  <span v-if="msg.content">{{ msg.content }}</span>
+                <div class="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm leading-relaxed">
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div
+                    v-if="msg.content"
+                    class="prose prose-sm max-w-none"
+                    v-html="renderMarkdown(msg.content)"
+                  />
                   <span v-else class="inline-flex items-center gap-1 text-muted-foreground">
                     <span class="animate-bounce">.</span>
                     <span class="animate-bounce [animation-delay:0.15s]">.</span>

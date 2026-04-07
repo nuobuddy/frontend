@@ -167,8 +167,20 @@ export const useChatStore = defineStore('chat', () => {
             if (event.conversationId && currentConversation.value) {
               currentConversation.value.difyConversationId = event.conversationId
             }
-            // Refresh conversation to get proper message IDs from server
-            fetchConversationDetail(conversationId)
+            // Refresh conversation in background to get proper message IDs from server
+            // Use a silent fetch that doesn't reset loading state or wipe current messages
+            ;(async () => {
+              try {
+                const { api } = await import('@/lib/api')
+                const detail = await api.getConversationDetail(conversationId)
+                // Only update if we're not streaming again
+                if (!streaming.value) {
+                  currentConversation.value = detail
+                }
+              } catch {
+                // ignore background refresh errors
+              }
+            })()
             break
           }
           case 'error':
