@@ -7,6 +7,8 @@ import DOMPurify from 'dompurify'
 import ChatSideBar from '@/components/chat/ChatSideBar.vue'
 import ChatHeader from '@/components/chat/ChatHeader.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
+import RecommandCard from '@/components/chat/RecommandCard.vue'
+import type { RecommendQuestion } from '@/components/chat/RecommandCard.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 
@@ -187,6 +189,27 @@ function formatTime(dateStr: string) {
 
 // Get token for ChatHeader
 const token = computed(() => authStore.token ?? undefined)
+
+// --- Recommend questions ---
+const allRecommendQuestions: RecommendQuestion[] = [
+  { title: 'How do I connect to eduroam Wi-Fi on campus?', category: 'Campus IT' },
+  { title: 'How do I apply for financial aid or scholarships?', category: 'Financial Aid' },
+  { title: 'How do I add or drop a course?', category: 'Registration' },
+  { title: 'What mental health support is available on campus?', category: 'Wellness' },
+  { title: 'How do I change my major or minor?', category: 'Academics' },
+  { title: 'Where can I find on-campus jobs?', category: 'Career' },
+  { title: 'How do I join student clubs or organizations?', category: 'Campus Life' },
+  { title: 'How do I appeal a grade?', category: 'Academics' },
+]
+
+const maxCards = computed(() => (isMobile.value ? 3 : 5))
+
+const recommendQuestions = computed(() => allRecommendQuestions.slice(0, maxCards.value))
+
+function handleRecommendSelect(question: string) {
+  inputValue.value = question
+  handleSend(question)
+}
 </script>
 
 <template>
@@ -268,10 +291,20 @@ const token = computed(() => authStore.token ?? undefined)
           <!-- Welcome state -->
           <div
             v-if="messages.length === 0 && !isShareMode"
-            class="flex flex-col items-center justify-center h-full text-center gap-3"
+            class="flex flex-col items-center justify-center h-full gap-6"
           >
-            <p class="text-2xl font-semibold text-foreground">{{ t('chat.welcomeTitle') }}</p>
-            <p class="text-sm text-muted-foreground">{{ t('chat.welcomeSubtitle') }}</p>
+            <div class="text-center gap-3">
+              <p class="text-2xl font-semibold text-foreground">{{ t('chat.welcomeTitle') }}</p>
+              <p class="text-sm text-muted-foreground mt-1">{{ t('chat.welcomeSubtitle') }}</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 w-full max-w-3xl px-2">
+              <RecommandCard
+                v-for="(q, i) in recommendQuestions"
+                :key="i"
+                :question="q"
+                @select="handleRecommendSelect"
+              />
+            </div>
           </div>
 
           <!-- Share mode empty state -->
